@@ -1,4 +1,4 @@
-import {defs, tiny} from './common.js';
+import {defs, tiny} from './external/common.js';
 import {Wonderland} from './wonderland.js';
 const { Canvas_Widget, Code_Widget, Text_Widget } = tiny;
 

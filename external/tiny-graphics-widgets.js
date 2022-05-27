@@ -246,7 +246,7 @@ const Code_Widget = widgets.Code_Widget =
             if (!main_scene)
                 return;
 
-            import( './main-scene.js' )
+            import( '../../main-scene.js' )
                 .then(module => {
                     this.build_reader(element, main_scene, additional_scenes, module.defs);
                     if (!options.hide_navigator)

@@ -1,5 +1,5 @@
-import {defs, tiny} from './common.js';
-import {Wonderland} from './wonderland.js';
+import { defs, tiny } from "./external/common.js";
+import { Wonderland } from "./wonderland.js";
 const { Canvas_Widget, Code_Widget, Text_Widget } = tiny;
 
 // Now we have loaded everything in the files tiny-graphics.js, tiny-graphics-widgets.js, and common.js.
@@ -12,11 +12,11 @@ const { Canvas_Widget, Code_Widget, Text_Widget } = tiny;
 
 const Minimal_Webgl_Demo = defs.Minimal_Webgl_Demo;
 
-Object.assign(defs, {Wonderland});
+Object.assign(defs, { Wonderland });
 
 // ******************** End extra step
 
 const Main_Scene = Wonderland;
 const Additional_Scenes = [];
 
-export {Main_Scene, Additional_Scenes, Canvas_Widget, Code_Widget, Text_Widget, defs}
+export { Main_Scene, Additional_Scenes, Canvas_Widget, Code_Widget, Text_Widget, defs };

@@ -15,7 +15,6 @@ export class Wonderland extends Scene {
             cube: new Cube(),
             walls: new Shape_From_File("assets/walls.obj"),
             obelisk_base: new Cube(),
-            // obelisk_tip: new Torus(50, 50),
             obelisk_tip: new Shape_From_File("assets/pyramid.obj")
         };
 

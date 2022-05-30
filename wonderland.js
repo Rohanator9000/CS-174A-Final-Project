@@ -7,6 +7,22 @@ const { Cube } = defs;
 const { Vector, vec4, color, Mat4, Light, Material, Scene, Texture, hex_color } = tiny;
 const { scale, translation, perspective } = Mat4;
 
+class Mushroom {
+    constructor(position, which_cap, color_or_texture, color, changes_color, texture, cap_scale, stem_scale, none_scale_rotate, scale_rate, rotate_rate) {
+        this.position = position;
+        this.which_cap = which_cap;    // 0 - basic cap, 1 - special cap
+        this.color_or_texture = color_or_texture;    // 0 - color, 1 - texture
+        this.color = color;
+        this.changes_color = changes_color;  // 0 - no change color, 1 changes color
+        this.texture = texture;
+        this.cap_scale = cap_scale;
+        this.stem_scale = stem_scale;
+        this.none_scale_rotate = none_scale_rotate; // 0 - nothing, 1 - scaling, 2 - rotating
+        this.scale_rate = scale_rate;
+        this.rotate_rate = rotate_rate;
+    }
+}
+
 export class Wonderland extends Scene {
     constructor() {
         super();
@@ -16,7 +32,10 @@ export class Wonderland extends Scene {
             walls: new Shape_From_File("assets/walls.obj"),
             obelisk_base: new Cube(),
             obelisk_tip: new Shape_From_File("assets/pyramid.obj"),
-            sphere_sub_6: new defs.Subdivision_Sphere(6)
+            sphere_sub_6: new defs.Subdivision_Sphere(6),
+            mushroom_cap_basic: new Shape_From_File("assets/mushroom-cap-basic.obj"),
+            mushroom_cap: new Shape_From_File("assets/mushroom-cap.obj"),
+            mushroom_stem: new Shape_From_File("assets/mushroom-stem.obj"),
         };
 
         this.materials = {
@@ -58,8 +77,30 @@ export class Wonderland extends Scene {
             planet_3: new Material(new defs.Phong_Shader(), 
                 {ambient: 0.5, diffusivity: 0.75, specularity: 0.75, color: hex_color("#B08040")}),
             planet_4: new Material(new defs.Phong_Shader(), 
-                {ambient: 0.5, diffusivity: 0.75, specularity: 0.75, color: hex_color("#93CAED")})
+                {ambient: 0.5, diffusivity: 0.75, specularity: 0.75, color: hex_color("#93CAED")}),
+            mushroom_cap_material_color: new Material(new defs.Phong_Shader(), {
+                ambient: 0.8,
+                diffusivity: 0.8,
+                color: hex_color('#1F85DE'),
+            }),
+            mushroom_cap_material_texture_1: new Material(new defs.Textured_Phong(1), {
+                color: hex_color("#000000"),
+                ambient: 1,
+                texture: new Texture("assets/red-mushroom.jpeg"),
+            }),
+            mushroom_cap_material_texture_2: new Material(new defs.Textured_Phong(1), {
+                color: hex_color("#000000"),
+                ambient: 1,
+                texture: new Texture("assets/brown-mushroom.jpeg"),
+            }),
+            mushroom_cap_material_texture_3: new Material(new defs.Textured_Phong(1), {
+                color: hex_color("#000000"),
+                ambient: 1,
+                texture: new Texture("assets/white-mushroom.jpeg"),
+            }),
         };
+
+        this.mushrooms = this.generate_mushrooms();
 
         // STUPID WAY OF DOING THIS
         this.shapes.obelisk_base.arrays.texture_coord = [
@@ -194,6 +235,133 @@ export class Wonderland extends Scene {
         this.shapes.sphere_sub_6.draw(context, program_state, model_transform_planet4_2, this.materials.planet_4.override({color: green_blue}));
         this.planet_4 = model_transform_planet4_2;
     }
+            
+    generate_mushrooms() {
+        let mushrooms = [];
+        
+        let x = 1;
+        let mushroom_scale;
+        while (x <= 17) {
+            let z = 1;
+            while (z <= 17) {
+                let mushroom_x = x + Math.random() * 6.0 - 3;
+                // Generate mushroom
+                mushroom_scale = Math.random() * 1.5 + 0.5;
+                let stem_scale = Math.random() * 0.75 + 0.25;
+                
+                let none_scale_rotate = 0;
+                let none_scale_rotate_chance = Math.floor(Math.random() * 10);
+                if (none_scale_rotate_chance < 4) { // 40% chance of scale
+                    none_scale_rotate = 1;
+                }
+                else if (none_scale_rotate_chance < 8) { // 40% chance of rotate
+                    none_scale_rotate = 2;
+                }
+                
+                mushrooms.push(new Mushroom(
+                    [mushroom_x, z],
+                    Math.floor(Math.random() * 10) < 2 ? 0 : 1, // 20% of basic cap
+                    Math.floor(Math.random() * 10) < 6 ? 0 : 1, // 60% of color
+                    color((Math.random() * 147 + 89)/255.0, (Math.random() * 147 + 89)/255.0, (Math.random() * 147 + 89)/255.0, 1),
+                    1,
+                    Math.floor(Math.random() * 3),
+                    [mushroom_scale, Math.random() * 1.5 + 0.5, mushroom_scale],
+                    [stem_scale, Math.random() * 4 + 0.5, stem_scale],
+                    none_scale_rotate,
+                    Math.random() * 1.5 + 0.5,
+                    Math.random() * 1.5 + 0.5,
+                ));
+                z += mushroom_scale * 4 + 1;
+            }
+            x += 5;
+        }
+        return mushrooms;
+    }
+
+    draw_mushrooms(context, program_state, model_transform) {
+        const t = program_state.animation_time / 1000;
+        model_transform = model_transform.times(Mat4.translation(0, -1, 0));
+
+        for (let i = 0; i < this.mushrooms.length; i++) {
+            let mushroom = this.mushrooms[i];
+            
+            model_transform = model_transform.times(Mat4.translation(mushroom.position[0], 0, mushroom.position[1]));
+
+            // scaling or rotating
+            if (mushroom.none_scale_rotate == 1) {  // scale
+                const scale_factor = 0.5*Math.sin(mushroom.scale_rate*t) + 1.5;
+                model_transform = model_transform.times(Mat4.scale(scale_factor, scale_factor, scale_factor));
+            }
+            else if (mushroom.none_scale_rotate == 2) {  // rotate
+                const rotate_factor = mushroom.rotate_rate * t;
+                model_transform = model_transform.times(Mat4.rotation(rotate_factor, 0, 1, 0));
+            }
+            
+            // scale for stem
+            model_transform = model_transform.times(Mat4.scale(mushroom.stem_scale[0], mushroom.stem_scale[1], mushroom.stem_scale[2]))
+                .times(Mat4.translation(0, 1, 0));
+
+            // draw mushroom stem
+            this.shapes.mushroom_stem.draw(context, program_state, model_transform, this.materials.origin.override({color:hex_color("d0cebf")}));
+
+            // move up for cap
+            model_transform = model_transform.times(Mat4.translation(0, 0.8, 0));
+
+            // unscale stem scaling
+            model_transform = model_transform.times(Mat4.scale(1/mushroom.stem_scale[0], 1/mushroom.stem_scale[1], 1/mushroom.stem_scale[2]));
+
+            // scale for mushroom cap 
+            model_transform = model_transform.times(Mat4.scale(mushroom.cap_scale[0], mushroom.cap_scale[1], mushroom.cap_scale[2]));
+            
+            // draw mushroom cap
+            let texture_material;
+            switch (mushroom.texture) {
+                case 0:
+                    texture_material = this.materials.mushroom_cap_material_texture_1;
+                    break;
+                case 1:
+                    texture_material = this.materials.mushroom_cap_material_texture_2;
+                    break;
+                case 2:
+                    texture_material = this.materials.mushroom_cap_material_texture_3;
+                    break;
+            }
+
+            let mushroom_color = (mushroom.changes_color == 1) ? color((73.5*Math.sin(t - mushroom.color[0]*255) + 162.5)/255, (73.5*Math.sin(t - mushroom.color[1]*255) + 162.5)/255, (73.5*Math.sin(t - mushroom.color[2]*255) + 162.5)/255, 1) : mushroom.color;
+            let material = mushroom.color_or_texture == 0 ? this.materials.mushroom_cap_material_color.override({color: mushroom_color}) : texture_material;
+
+            if (mushroom.which_cap == 0) {
+                this.shapes.mushroom_cap_basic.draw(context, program_state, model_transform, material);
+            }
+            else {
+                this.shapes.mushroom_cap.draw(context, program_state, model_transform, material);
+            }
+
+            // unscale for mushroom cap
+            model_transform = model_transform.times(Mat4.scale(1/mushroom.cap_scale[0], 1/mushroom.cap_scale[1], 1/mushroom.cap_scale[2]));
+
+            // undo all transformations so can move back down
+            model_transform = model_transform.times(Mat4.scale(mushroom.stem_scale[0], mushroom.stem_scale[1], mushroom.stem_scale[2]))
+                .times(Mat4.translation(0, -0.8, 0))
+                .times(Mat4.translation(0, -1, 0))
+                .times(Mat4.scale(1/mushroom.stem_scale[0], 1/mushroom.stem_scale[1], 1/mushroom.stem_scale[2]))
+                
+            // scaling
+            if (mushroom.none_scale_rotate == 1) {
+                const scale_factor = 0.5*Math.sin(mushroom.scale_rate*t) + 1.5;
+                model_transform = model_transform.times(Mat4.scale(1/scale_factor, 1/scale_factor, 1/scale_factor));
+            }
+            else if (mushroom.none_scale_rotate == 2) {  // rotate
+                const rotate_factor = mushroom.rotate_rate * t;
+                model_transform = model_transform.times(Mat4.rotation(-rotate_factor, 0, 1, 0));
+            }
+            
+            model_transform = model_transform.times(Mat4.translation(-mushroom.position[0], 0, -mushroom.position[1]));
+        }
+
+        model_transform = model_transform.times(Mat4.translation(0, 1, 0));
+        return model_transform;
+    }
 
     display(context, program_state) {
         // Add movement controls if not already created.
@@ -233,5 +401,10 @@ export class Wonderland extends Scene {
         // Draw main exhibit.
         this.draw_obelisk(program_state, context);
         this.draw_orbs(program_state, context);
+
+        // Draw mushrooms
+        let model_transform = Mat4.identity();
+        model_transform = model_transform.times(Mat4.translation(-37, 0, 20));
+        model_transform = this.draw_mushrooms(context, program_state, model_transform);
     }
 }

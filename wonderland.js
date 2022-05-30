@@ -48,7 +48,7 @@ export class Wonderland extends Scene {
         this.shapes.obelisk_base.arrays.texture_coord = [
             Vector.of(0, 0), Vector.of(1, 0), Vector.of(0, 1), Vector.of(1, 1), // bottom face
             Vector.of(0, 0), Vector.of(1, 0), Vector.of(0, 1), Vector.of(1, 1), // top face
-            Vector.of(0, 0), Vector.of(1, 0), Vector.of(0, 8), Vector.of(1, 8), 
+            Vector.of(0, 0), Vector.of(1, 0), Vector.of(0, 8), Vector.of(1, 8),
             Vector.of(0, 0), Vector.of(1, 0), Vector.of(0, 8), Vector.of(1, 8),
             Vector.of(0, 0), Vector.of(1, 0), Vector.of(0, 8), Vector.of(1, 8),
             Vector.of(0, 0), Vector.of(1, 0), Vector.of(0, 8), Vector.of(1, 8),
@@ -70,8 +70,6 @@ export class Wonderland extends Scene {
         );
         program_state.lights = [new Light(vec4(10, 20, 10, 1), color(1, 1, 1, 1), 1000)];
 
-        let model_transform = Mat4.identity();
-
         // Draw walls.
         this.shapes.walls.draw(
             context,
@@ -82,9 +80,9 @@ export class Wonderland extends Scene {
 
         // Draw main exhibit.
         // 1. draw main obelisk
-        let model_transform_obelisk_base = model_transform.times(Mat4.translation(0, 2.5, 0)).times(Mat4.scale(0.5, 5, 0.5));
+        const model_transform_obelisk_base = Mat4.translation(0, 2.5, 0).times(Mat4.scale(0.5, 5, 0.5));
         this.shapes.obelisk_base.draw(context, program_state, model_transform_obelisk_base, this.materials.dali);
-        let model_transform_obelisk_tip = model_transform.times(Mat4.translation(0, 7.75, 0)).times(Mat4.scale(0.4, 0.4, 0.4));
+        const model_transform_obelisk_tip = Mat4.translation(0, 7.75, 0).times(Mat4.scale(0.4, 0.4, 0.4));
         this.shapes.obelisk_tip.draw(context, program_state, model_transform_obelisk_tip, this.materials.obelisk_tip);
     }
 }

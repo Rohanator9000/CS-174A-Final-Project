@@ -2,10 +2,8 @@ import { tiny, defs } from "./external/common.js";
 import { Shape_From_File } from "./external/obj-file-demo.js";
 import { Custom_Movement_Controls } from "./custom-movement.js";
 
-const { Cube, Torus } = defs;
-const {
-    Vector, Vector3, vec, vec3, vec4, color, hex_color, Shader, Matrix, Mat4, Light, Shape, Material, Scene, Texture,
-} = tiny;
+const { Cube } = defs;
+const { Vector, vec4, color, Mat4, Light, Material, Scene, Texture } = tiny;
 
 export class Wonderland extends Scene {
     constructor() {

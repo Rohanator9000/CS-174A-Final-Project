@@ -1,6 +1,8 @@
 import { tiny, defs } from "./external/common.js";
 import { Shape_From_File } from "./external/obj-file-demo.js";
 import { Custom_Movement_Controls } from "./custom-movement.js";
+import { even_scale } from "./utility.js";
+import { config } from "./config.js";
 
 const { Cube } = defs;
 
@@ -27,13 +29,20 @@ export class Wonderland extends Scene {
                 specularity: 0.5,
                 texture: new Texture("assets/stars.png"),
             }),
+            alt_wall: new Material(new defs.Phong_Shader(), {
+                color: color(0.2, 0.3, 0.4, 1),
+                ambient: 0.9,
+                diffusivity: 0.5,
+                specularity: 0.5,
+            }),
         };
     }
 
     display(context, program_state) {
-        // Add movement controls.
+        // Add movement controls if not already created.
         if (!context.scratchpad.controls) {
-            this.children.push((context.scratchpad.controls = new Custom_Movement_Controls()));
+            context.scratchpad.controls = new Custom_Movement_Controls();
+            this.children.push(context.scratchpad.controls);
             program_state.set_camera(Mat4.identity());
         }
 
@@ -43,7 +52,10 @@ export class Wonderland extends Scene {
             1,
             100
         );
-        program_state.lights = [new Light(vec4(10, 20, 10, 1), color(1, 1, 1, 1), 1000)];
+        program_state.lights = [
+            new Light(vec4(10, 20, 10, 1), color(1, 1, 1, 1), 1000),
+            new Light(vec4(15, 20, 5, 1), color(1, 1, 1, 1), 1000),
+        ];
 
         // Origin, for visual reference.
         this.shapes.cube.draw(context, program_state, Mat4.identity(), this.materials.origin);
@@ -52,8 +64,8 @@ export class Wonderland extends Scene {
         this.shapes.walls.draw(
             context,
             program_state,
-            Mat4.scale(10, 10, 10),
-            this.materials.stars
+            even_scale(config.WALL_SCALING_FACTOR),
+            this.materials.alt_wall
         );
     }
 }

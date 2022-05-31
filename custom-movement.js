@@ -1,4 +1,6 @@
 import { defs, tiny } from "./external/common.js";
+import { lt, lte } from "./utility.js";
+import { config } from "./config.js";
 
 const { Movement_Controls } = defs;
 const { Mat4 } = tiny;
@@ -11,10 +13,9 @@ class Custom_Movement_Controls extends Movement_Controls {
     constructor() {
         super();
 
-        // Config.
+        // Options.
         this.lock_vertical_camera_translation = true;
         this.lock_vertical_camera_rotation = true;
-        this.vertical_camera_rotation_limit = 0.1;
 
         // Euler angles. For display.
         this.psi = 0;
@@ -269,6 +270,14 @@ class Custom_Movement_Controls extends Movement_Controls {
         const curr_loc = this.matrix();
         const new_loc = curr_loc.times(Mat4.translation(...this.thrust.times(-meters_per_frame)));
 
+        // Don't move to that location if it collides with a wall.
+        // This is compeletely independent of the y-coordinate.
+        const x = new_loc[0][3];
+        const z = new_loc[2][3];
+        if (!Custom_Movement_Controls.in_walls(x, z)) {
+            return;
+        }
+
         // Reset the new y-coordinate back to the original y-coordinate (meaning it never changes).
         if (this.lock_vertical_camera_translation) {
             new_loc[1][3] = curr_loc[1][3];
@@ -346,7 +355,7 @@ class Custom_Movement_Controls extends Movement_Controls {
         // }
 
         // Using psi to measure 'vertical' rotation, which could be totally wrong.
-        if (Math.abs(this.psi) >= this.vertical_camera_rotation_limit) {
+        if (Math.abs(this.psi) >= config.MAX_CAM_VERT_ROTATION) {
             if (this.psi < 0) {
                 // Too far down.
                 // console.log("too far down.")
@@ -382,6 +391,92 @@ class Custom_Movement_Controls extends Movement_Controls {
         this.inverse().set(Mat4.inverse(mat));
         // this.matrix().post_multiply(rotation);
         // this.inverse().pre_multiply(rotation);
+    }
+
+    static in_square(x, y, squ_x, squ_y, squ_length) {
+        /*
+        Checks whether the point (x,y) is within a square in the Cartesian plane.
+        Does not include the perimeter of the square.
+
+        squ_x and squ_y are the coordinates of the bottom left vertex of the square.
+        squ_length is the square length
+        */
+        return lt(squ_x, x, squ_x + squ_length) && lt(squ_y, y, squ_y + squ_length);
+    }
+
+    static in_center_wall(x, y) {
+        /*
+        Checks whether the point (x,y) is within a 'center-wall' in the Cartesian plane.
+        Includes the perimeter of the center-wall.
+
+        Center-wall refers to the bottom-left of the four inner walls.
+        Assumes the center-wall's bottom-left vertex is at the origin.
+        */
+
+        // Check each of the three distinct constitutents of the piece.
+        const in_left = lte(0, x, 1) && lte(0, y, 4);
+        const in_mid = lte(1, x, 2) && lte(0, y, 2);
+        const in_right = lte(2, x, 4) && lte(0, y, 1);
+
+        return in_left || in_mid || in_right;
+    }
+
+    static in_any_center_wall(x, y) {
+        /*
+        Checks whether the point (x,y) is within any 'center-wall' in the Cartesian plane.
+        Includes perimeter of the center-wall.
+
+        Assumes the bottom-left center-wall's bottom-left vertex is at the origin.
+        */
+
+        // Align with this coordinate system (relative origin position).
+        x += 4.5;
+        y += 4.5;
+
+        // Reflect about x=4.5 and y=4.5.
+        const x_reflected = 9 - x;
+        const z_reflected = 9 - y;
+
+        // Check each center-wall by reflecting it about a bisecting line (or 2), transforming each center-wall to the original.
+        // (Allows us to reuse a single function).
+        const bl = this.in_center_wall(x, y);
+        const tl = this.in_center_wall(x, z_reflected);
+        const tr = this.in_center_wall(x_reflected, z_reflected);
+        const br = this.in_center_wall(x_reflected, y);
+
+        return bl || tl || tr || br;
+    }
+
+    static in_walls(x, z) {
+        /*
+        Checks whether a 3D position is within the bounds of the walls (but not literally inside them).
+        Ignores y-coordinate, assuming it to be within the walls.
+        */
+
+        // The z-coordinate is defined backwards and I'm not changing it now lol.
+        z *= -1;
+
+        // For some reason, our walls initially have a diameter of NEW_PRESCALE_WALL_DIAMETER, instead of diameter 1.
+        const actual_scaling_factor =
+            config.WALL_SCALING_FACTOR *
+            (config.NEW_PRESCALE_WALL_DIAMETER / config.ORIGINAL_WALL_DIAMETER);
+
+        // Change coordinate system to original (Vectary's).
+        // Note that we're looking top-down, so our "z" is what we"ll pass for "y" on R^2.
+        x /= actual_scaling_factor;
+        z /= actual_scaling_factor;
+
+        // Check the 4 middle walls.
+        if (this.in_any_center_wall(x, z)) {
+            return false;
+        }
+
+        // Individually check each of the 3 squares.
+        const in_bottom_left_square = this.in_square(x, z, -9.5, -9.5, 5);
+        const in_top_right_square = this.in_square(x, z, 4.5, 4.5, 5);
+        const in_middle_square = this.in_square(x, z, -5.5, -5.5, 11);
+
+        return in_bottom_left_square || in_top_right_square || in_middle_square;
     }
 }
 

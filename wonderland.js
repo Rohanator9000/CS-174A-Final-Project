@@ -1,7 +1,6 @@
 import { tiny, defs } from "./external/common.js";
 import { Shape_From_File } from "./external/obj-file-demo.js";
 import { Custom_Movement_Controls } from "./custom-movement.js";
-import { even_scale } from "./utility.js";
 import { config } from "./config.js";
 
 const { Cube } = defs;
@@ -101,12 +100,12 @@ export class Wonderland extends Scene {
         ];
 
         // Draw walls.
-        this.shapes.walls.draw(
-            context,
-            program_state,
-            even_scale(config.WALL_SCALING_FACTOR),
-            this.materials.alt_wall
+        const wall_size = Mat4.scale(
+            config.WALL_HOR_SCALE_FACTOR,
+            config.WALL_VERT_SCALE_FACTOR,
+            config.WALL_HOR_SCALE_FACTOR
         );
+        this.shapes.walls.draw(context, program_state, wall_size, this.materials.alt_wall);
 
         // Draw obelisk.
         const model_transform_obelisk_base = Mat4.translation(0, 2.5, 0).times(

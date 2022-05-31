@@ -34,9 +34,4 @@ function lte(...vals) {
     return true;
 }
 
-function even_scale(factor) {
-    // Returns a Mat4 scaling by factor in all dimensions.
-    return Mat4.scale(factor, factor, factor);
-}
-
-export { lt, lte, even_scale };
+export { lt, lte };

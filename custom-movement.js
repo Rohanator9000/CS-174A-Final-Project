@@ -458,7 +458,7 @@ class Custom_Movement_Controls extends Movement_Controls {
 
         // For some reason, our walls initially have a diameter of NEW_PRESCALE_WALL_DIAMETER, instead of diameter 1.
         const actual_scaling_factor =
-            config.WALL_SCALING_FACTOR *
+            config.WALL_HOR_SCALE_FACTOR *
             (config.NEW_PRESCALE_WALL_DIAMETER / config.ORIGINAL_WALL_DIAMETER);
 
         // Change coordinate system to original (Vectary's).

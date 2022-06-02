@@ -93,19 +93,19 @@ export class Wonderland extends Scene {
     find_y_pos_1(t) {
         // 1 period per 4 seconds -> 0.25 period per 1 second -> frequency
         const amplitude = 1, freq = 0.75, angular_freq = 2 * Math.PI * freq;
-        var y_pos = 5 + amplitude * Math.sin(angular_freq * t);
+        var y_pos = 8 + amplitude * Math.sin(angular_freq * t);
         return y_pos;
     }
 
     find_y_pos_2(t) {
         // 1 period per 4 seconds -> 0.25 period per 1 second -> frequency
         const amplitude = 1, freq = 0.75, angular_freq = 2 * Math.PI * freq;
-        var y_pos = 5 + amplitude * Math.sin(angular_freq * t + Math.PI);
+        var y_pos = 8 + amplitude * Math.sin(angular_freq * t + Math.PI);
         return y_pos;
     }
 
     draw_obelisk(program_state, context) {
-        const model_transform_obelisk_base = Mat4.translation(0, 2.5, 0).times(
+        const model_transform_obelisk_base = Mat4.translation(0, 5, 0).times(
             Mat4.scale(0.5, 5, 0.5)
         );
         this.shapes.obelisk_base.draw(
@@ -114,7 +114,7 @@ export class Wonderland extends Scene {
             model_transform_obelisk_base,
             this.materials.obelisk_base
         );
-        const model_transform_obelisk_tip = Mat4.translation(0, 7.75, 0).times(
+        const model_transform_obelisk_tip = Mat4.translation(0, 10.4, 0).times(
             Mat4.scale(0.4, 0.4, 0.4)
         );
         this.shapes.obelisk_tip.draw(

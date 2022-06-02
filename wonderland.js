@@ -195,6 +195,111 @@ export class Wonderland extends Scene {
         this.planet_4 = model_transform_planet4_2;
     }
 
+    find_y_pos_1(t) {
+        // 1 period per 4 seconds -> 0.25 period per 1 second -> frequency
+        const amplitude = 1, freq = 0.75, angular_freq = 2 * Math.PI * freq;
+        var y_pos = 5 + amplitude * Math.sin(angular_freq * t);
+        return y_pos;
+    }
+
+    find_y_pos_2(t) {
+        // 1 period per 4 seconds -> 0.25 period per 1 second -> frequency
+        const amplitude = 1, freq = 0.75, angular_freq = 2 * Math.PI * freq;
+        var y_pos = 5 + amplitude * Math.sin(angular_freq * t + Math.PI);
+        return y_pos;
+    }
+
+    draw_obelisk(program_state, context) {
+        const model_transform_obelisk_base = Mat4.translation(0, 2.5, 0).times(
+            Mat4.scale(0.5, 5, 0.5)
+        );
+        this.shapes.obelisk_base.draw(
+            context,
+            program_state,
+            model_transform_obelisk_base,
+            this.materials.obelisk_base
+        );
+        const model_transform_obelisk_tip = Mat4.translation(0, 7.75, 0).times(
+            Mat4.scale(0.4, 0.4, 0.4)
+        );
+        this.shapes.obelisk_tip.draw(
+            context,
+            program_state,
+            model_transform_obelisk_tip,
+            this.materials.obelisk_tip
+        );
+    }
+
+    draw_orbs(program_state, context) {
+        let model_transform = Mat4.identity();
+        const t = program_state.animation_time / 1000, dt = program_state.animation_delta_time / 1000;
+        const gray = hex_color("#808080");
+        const green_blue = hex_color("#80FFFF");
+        const muddy_brown = hex_color("#B08040");
+        const light_blue = hex_color("#93CAED");
+        const y_pos_1 = this.find_y_pos_1(t);
+        const y_pos_2 = this.find_y_pos_2(t);
+            
+        // PLANETS 1 ~ 4
+        const planet_radius = 1;
+
+        // COLUMN 1
+        // ORB 1
+        let model_transform_planet1 = model_transform.times(Mat4.rotation(2*t, 0, 1, 0)).times(Mat4.translation(2, y_pos_1, 0));
+        this.shapes.sphere_sub_6.draw(context, program_state, model_transform_planet1, this.materials.planet_1.override({color: gray}));
+        this.planet_1 = model_transform_planet1;
+        // ORB 2
+        let model_transform_planet1_1 = model_transform.times(Mat4.rotation(2*t, 0, 1, 0)).times(Mat4.translation(4, y_pos_2, 0));
+        this.shapes.sphere_sub_6.draw(context, program_state, model_transform_planet1_1, this.materials.planet_1.override({color: green_blue}));
+        this.planet_1_1 = model_transform_planet1_1;
+        // ORB 3
+        let model_transform_planet1_2 = model_transform.times(Mat4.rotation(2*t, 0, 1, 0)).times(Mat4.translation(6, y_pos_1, 0));
+        this.shapes.sphere_sub_6.draw(context, program_state, model_transform_planet1_2, this.materials.planet_1.override({color: muddy_brown}));
+        this.planet_1_2 = model_transform_planet1_2;
+
+        // COLUMN 2
+        // ORB 1
+        let model_transform_planet2 = model_transform.times(Mat4.rotation(2*t, 0, 1, 0)).times(Mat4.translation(-2, y_pos_1, 0));
+        this.shapes.sphere_sub_6.draw(context, program_state, model_transform_planet2, this.materials.planet_2_phong.override({color: green_blue}));
+        this.planet_2 = model_transform_planet2;
+        // ORB 2
+        let model_transform_planet2_1 = model_transform.times(Mat4.rotation(2*t, 0, 1, 0)).times(Mat4.translation(-4, y_pos_2, 0));
+        this.shapes.sphere_sub_6.draw(context, program_state, model_transform_planet2_1, this.materials.planet_2_phong.override({color: muddy_brown}));
+        this.planet_2_1 = model_transform_planet2_1;
+        // ORB 3
+        let model_transform_planet2_2 = model_transform.times(Mat4.rotation(2*t, 0, 1, 0)).times(Mat4.translation(-6, y_pos_1, 0));
+        this.shapes.sphere_sub_6.draw(context, program_state, model_transform_planet2_2, this.materials.planet_2_phong.override({color: light_blue}));
+        this.planet_2_2 = model_transform_planet2_2;
+
+        // COLUMN 3
+        // ORB 1
+        let model_transform_planet3 = model_transform.times(Mat4.rotation(2*t, 0, 1, 0)).times(Mat4.translation(0, y_pos_1, 2));
+        this.shapes.sphere_sub_6.draw(context, program_state, model_transform_planet3, this.materials.planet_3.override({color: muddy_brown}));
+        this.planet_3 = model_transform_planet3;
+        // ORB 2
+        let model_transform_planet3_1 = model_transform.times(Mat4.rotation(2*t, 0, 1, 0)).times(Mat4.translation(0, y_pos_2, 4));
+        this.shapes.sphere_sub_6.draw(context, program_state, model_transform_planet3_1, this.materials.planet_3.override({color: light_blue}));
+        this.planet_3_1 = model_transform_planet3_1;
+        // ORB 3
+        let model_transform_planet3_2 = model_transform.times(Mat4.rotation(2*t, 0, 1, 0)).times(Mat4.translation(0, y_pos_1, 6));
+        this.shapes.sphere_sub_6.draw(context, program_state, model_transform_planet3_2, this.materials.planet_3.override({color: gray}));
+        this.planet_3_2 = model_transform_planet3_2;
+            
+        // COLUMN 4
+        // ORB 1
+        let model_transform_planet4 = model_transform.times(Mat4.rotation(2*t, 0, 1, 0)).times(Mat4.translation(0, y_pos_1, -2));
+        this.shapes.sphere_sub_6.draw(context, program_state, model_transform_planet4, this.materials.planet_4.override({color: light_blue}));
+        this.planet_4 = model_transform_planet4;
+        // ORB 2
+        let model_transform_planet4_1 = model_transform.times(Mat4.rotation(2*t, 0, 1, 0)).times(Mat4.translation(0, y_pos_2, -4));
+        this.shapes.sphere_sub_6.draw(context, program_state, model_transform_planet4_1, this.materials.planet_4.override({color: gray}));
+        this.planet_4 = model_transform_planet4_1;
+        // ORB 3
+        let model_transform_planet4_2 = model_transform.times(Mat4.rotation(2*t, 0, 1, 0)).times(Mat4.translation(0, y_pos_1, -6));
+        this.shapes.sphere_sub_6.draw(context, program_state, model_transform_planet4_2, this.materials.planet_4.override({color: green_blue}));
+        this.planet_4 = model_transform_planet4_2;
+    }
+
     display(context, program_state) {
         // Add movement controls if not already created.
         if (!context.scratchpad.controls) {

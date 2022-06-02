@@ -5,6 +5,7 @@ import { config } from "./config.js";
 
 const { Cube } = defs;
 const { Vector, vec4, color, Mat4, Light, Material, Scene, Texture, hex_color } = tiny;
+const { scale, translation, perspective } = Mat4;
 
 export class Wonderland extends Scene {
     constructor() {
@@ -199,10 +200,10 @@ export class Wonderland extends Scene {
         if (!context.scratchpad.controls) {
             context.scratchpad.controls = new Custom_Movement_Controls();
             this.children.push(context.scratchpad.controls);
-            program_state.set_camera(Mat4.identity());
+            program_state.set_camera(translation(0, -config.CAMERA_HEIGHT, 0));
         }
-        let model_transform = Mat4.identity();
-        program_state.projection_transform = Mat4.perspective(
+
+        program_state.projection_transform = perspective(
             Math.PI / 4,
             context.width / context.height,
             1,
@@ -214,12 +215,20 @@ export class Wonderland extends Scene {
         ];
 
         // Draw walls.
-        const wall_size = Mat4.scale(
-            config.WALL_HOR_SCALE_FACTOR,
-            config.WALL_VERT_SCALE_FACTOR,
-            config.WALL_HOR_SCALE_FACTOR
+
+        // There is no reason we should have to subtract 1.5 from that number, but it works.
+        const wall_vertical_translation =
+            config.WALL_VERT_SCALE_FACTOR * config.NEW_PRESCALE_WALL_HEIGHT - 1.5;
+
+        // Scale the wall and translate it up so the floor is at the origin.
+        const wall_mt = translation(0, wall_vertical_translation, 0).times(
+            scale(
+                config.WALL_HOR_SCALE_FACTOR,
+                config.WALL_VERT_SCALE_FACTOR,
+                config.WALL_HOR_SCALE_FACTOR
+            )
         );
-        this.shapes.walls.draw(context, program_state, wall_size, this.materials.alt_wall);
+        this.shapes.walls.draw(context, program_state, wall_mt, this.materials.alt_wall);
 
         // Draw main exhibit.
         this.draw_obelisk(program_state, context);

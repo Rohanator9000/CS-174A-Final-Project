@@ -3,9 +3,12 @@ const config = {
     WALL_HOR_SCALE_FACTOR: 30,
     // The factor by which we scale our walls in the y dimension (vertically).
     WALL_VERT_SCALE_FACTOR: 20,
-    // For some reason, our walls initially have this diameter, instead of diameter 1.
+    // For some reason, our walls initially have this diameter and height, instead of 1.
     // I have no idea why, so I don't know how to derive it, hence hardcoding.
-    NEW_PRESCALE_WALL_DIAMETER: 1.4399796724319458,
+    NEW_PRESCALE_WALL_DIAMETER: 1.3848389387130737,
+    NEW_PRESCALE_WALL_HEIGHT: 0.30041423439979553,
+    // Units above xz plane.
+    CAMERA_HEIGHT: 2.5,
     // The original diameter of the wall when created in Vectary.
     // Required because I did all my calculations in that coordinate system.
     ORIGINAL_WALL_DIAMETER: 10.5,

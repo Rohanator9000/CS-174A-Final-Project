@@ -385,7 +385,6 @@ export class Wonderland extends Scene {
                 // angular_freq = 2 * pi * freq
                 // y = amplitude * sin(angular_freq * time)
         const sun_radius = 2 + Math.sin(2 * Math.PI * t / 10);
-        // const sun_radius = 3;
 
         // red at smallest to white at largest
         const sun_color = color(1, sun_radius / 2 - 0.5, sun_radius / 2 - 0.5, 1);

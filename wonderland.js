@@ -3,8 +3,8 @@ import { Shape_From_File } from "./external/obj-file-demo.js";
 import { Custom_Movement_Controls } from "./custom-movement.js";
 import { config } from "./config.js";
 
-const { Cube } = defs;
-const { Vector, vec4, color, Mat4, Light, Material, Scene, Texture, hex_color } = tiny;
+const { Cube, Torus } = defs;
+const { Vector, vec4, color, Mat4, Light, Material, Scene, Texture, hex_color, Shader, Matrix } = tiny;
 const { scale, translation, perspective } = Mat4;
 
 export class Wonderland extends Scene {
@@ -16,7 +16,8 @@ export class Wonderland extends Scene {
             walls: new Shape_From_File("assets/walls.obj"),
             obelisk_base: new Cube(),
             obelisk_tip: new Shape_From_File("assets/pyramid.obj"),
-            sphere_sub_6: new defs.Subdivision_Sphere(6)
+            sphere_sub_6: new defs.Subdivision_Sphere(6),
+            torus: new defs.Torus(15, 15),
         };
 
         this.materials = {
@@ -51,6 +52,8 @@ export class Wonderland extends Scene {
                 diffusivity: 0.5,
                 specularity: 0.5,
             }),
+            sun: new Material(new defs.Phong_Shader(),
+                {ambient: 1, color: hex_color("#ffffff")}),
             planet_1: new Material(new defs.Phong_Shader(), 
                 {ambient: 0.7, diffusivity: 0.75, specularity: 0.75, color: hex_color("#808080")}),
             planet_2_phong: new Material(new defs.Phong_Shader(), 
@@ -58,7 +61,11 @@ export class Wonderland extends Scene {
             planet_3: new Material(new defs.Phong_Shader(), 
                 {ambient: 0.5, diffusivity: 0.75, specularity: 0.75, color: hex_color("#B08040")}),
             planet_4: new Material(new defs.Phong_Shader(), 
-                {ambient: 0.5, diffusivity: 0.75, specularity: 0.75, color: hex_color("#93CAED")})
+                {ambient: 0.5, diffusivity: 0.75, specularity: 0.75, color: hex_color("#93CAED")}),
+            ring: new Material(new Ring_Shader(), 
+                {ambient: 1, diffusivity: 0, specularity: 0, color: hex_color("#B08040")}),
+            moon: new Material(new defs.Phong_Shader(), 
+                {ambient: 0.5, diffusivity: 0, specularity: 1, color: hex_color("#FF69B4")})
         };
 
         // STUPID WAY OF DOING THIS
@@ -195,6 +202,73 @@ export class Wonderland extends Scene {
         this.planet_4 = model_transform_planet4_2;
     }
 
+    draw_solar_system_above(program_state, context) {
+        let model_transform = Mat4.identity();
+        model_transform = model_transform.times(Mat4.translation(0, 50, 0));
+        const t = program_state.animation_time / 1000, dt = program_state.animation_delta_time / 1000;
+        // this.shapes.torus.draw(context, program_state, model_transform, this.materials.test.override({color: yellow}));
+        const white = hex_color("#ffffff");
+
+        // color and size of sun
+            // change -1 to 1 to 1 to 3
+                // requirement: 1 cycle per 10 seconds
+                // amplitude = 2
+                // freq = 0.1 cycle / sec
+                // angular_freq = 2 * pi * freq
+                // y = amplitude * sin(angular_freq * time)
+        const sun_radius = 2 + Math.sin(2 * Math.PI * t / 10);
+        // const sun_radius = 3;
+
+        // red at smallest to white at largest
+        const sun_color = color(1, sun_radius / 2 - 0.5, sun_radius / 2 - 0.5, 1);
+
+        let model_transform_sun = model_transform.times(Mat4.scale(sun_radius, sun_radius, sun_radius));
+        this.shapes.sphere_sub_6.draw(context, program_state, model_transform_sun, this.materials.sun.override({color: sun_color}));
+
+        // DRAW LIGHT
+        const light_size = 10 ** sun_radius;
+        const light_position = vec4(0, 0, 0, 1);
+        program_state.lights = [new Light(light_position, sun_color, light_size)];
+
+        // PLANETS 1 ~ 4
+        const planet_radius = 1;
+
+        // PLANET 1
+        const gray = hex_color("#808080");
+        let model_transform_planet1 = model_transform.times(Mat4.rotation(t, 0, 1, 0)).times(Mat4.translation(5, 0, 0));
+        this.shapes.sphere_sub_6.draw(context, program_state, model_transform_planet1, this.materials.planet_1.override({color: gray}));
+        // camera matrix
+        this.planet_1 = model_transform_planet1;
+
+        // PLANET 2
+        const green_blue = hex_color("#80FFFF");
+        let model_transform_planet2 = model_transform.times(Mat4.rotation(t/1.1, 0, 1, 0)).times(Mat4.translation(8, 0, 0));
+        this.shapes.sphere_sub_6.draw(context, program_state, model_transform_planet2, this.materials.planet_2_phong.override({color: green_blue}));
+        this.planet_2 = model_transform_planet2;
+
+        // PLANET 3
+        const muddy_brown = hex_color("#B08040");
+        let model_transform_planet3 = model_transform.times(Mat4.rotation(t/1.2, 0, 1, 0)).times(Mat4.translation(11, 0, 0));
+        this.planet_3 = model_transform_planet3;
+        // self-rotation (wobble)
+        model_transform_planet3 = model_transform_planet3.times(Mat4.rotation(t/1.2, 0.5, 0.8, 1));
+        this.shapes.sphere_sub_6.draw(context, program_state, model_transform_planet3, this.materials.planet_3.override({color: muddy_brown}));
+        // draw the ring
+        let model_transform_ring = model_transform_planet3.times(Mat4.scale(3, 3, 0.1));
+        this.shapes.torus.draw(context, program_state, model_transform_ring, this.materials.ring);
+
+        // PLANET 4
+        const light_blue = hex_color("#93CAED");
+        let model_transform_planet4 = model_transform.times(Mat4.rotation(t/1.3, 0, 1, 0)).times(Mat4.translation(14, 0, 0));
+        this.planet_4 = model_transform_planet4;
+        this.shapes.sphere_sub_6.draw(context, program_state, model_transform_planet4, this.materials.planet_4.override({color: light_blue}));
+        // moon
+        const hot_pink = hex_color("#FF69B4");
+        let model_transform_moon = model_transform_planet4.times(Mat4.rotation(t, 0, 1, 0)).times(Mat4.translation(2, 0, 0));
+        this.moon = model_transform_moon;
+        this.shapes.sphere_sub_6.draw(context, program_state, model_transform_moon, this.materials.moon.override({color: hot_pink}));
+    }
+
     display(context, program_state) {
         // Add movement controls if not already created.
         if (!context.scratchpad.controls) {
@@ -233,5 +307,58 @@ export class Wonderland extends Scene {
         // Draw main exhibit.
         this.draw_obelisk(program_state, context);
         this.draw_orbs(program_state, context);
+
+        // Draw solar system up above
+        this.draw_solar_system_above(program_state, context);
+    }
+}
+
+class Ring_Shader extends Shader {
+    update_GPU(context, gpu_addresses, graphics_state, model_transform, material) {
+        // update_GPU():  Defining how to synchronize our JavaScript's variables to the GPU's:
+        const [P, C, M] = [graphics_state.projection_transform, graphics_state.camera_inverse, model_transform],
+            PCM = P.times(C).times(M);
+        context.uniformMatrix4fv(gpu_addresses.model_transform, false, Matrix.flatten_2D_to_1D(model_transform.transposed()));
+        context.uniformMatrix4fv(gpu_addresses.projection_camera_model_transform, false,
+            Matrix.flatten_2D_to_1D(PCM.transposed()));
+    }
+
+    shared_glsl_code() {
+        // ********* SHARED CODE, INCLUDED IN BOTH SHADERS *********
+        return `
+        precision mediump float;
+        varying vec4 point_position;
+        varying vec4 center;
+        `;
+    }
+
+    vertex_glsl_code() {
+        // ********* VERTEX SHADER *********
+        // TODO:  Complete the main function of the vertex shader (Extra Credit Part II).
+        return this.shared_glsl_code() + `
+        attribute vec3 position;
+        uniform mat4 model_transform;
+        uniform mat4 projection_camera_model_transform;
+        
+        void main(){
+            // The vertex's final resting place (in NDCS):
+            gl_Position = projection_camera_model_transform * vec4( position, 1.0 );
+            point_position = model_transform * vec4( position, 1.0 );
+
+            // position of new center of ring
+            center = model_transform * vec4(0.0, 0.0, 0.0, 1.0);
+        }`;
+    }
+
+    fragment_glsl_code() {
+        // ********* FRAGMENT SHADER *********
+        // TODO:  Complete the main function of the fragment shader (Extra Credit Part II).
+        return this.shared_glsl_code() + `
+        void main(){
+            // compute the distance of the fragment to center
+            vec3 distance = vec3(point_position.xyz - center.xyz);
+            // set the a,pha value (brightness) of the fragment
+            gl_FragColor = vec4( vec3(0.69, 0.50, 0.25), cos( length(distance) * 20.0));
+        }`;
     }
 }

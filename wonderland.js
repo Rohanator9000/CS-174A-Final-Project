@@ -2,10 +2,11 @@ import { tiny, defs } from "./external/common.js";
 import { Shape_From_File } from "./external/obj-file-demo.js";
 import { Custom_Movement_Controls } from "./custom-movement.js";
 import { config } from "./config.js";
+import { Body } from "./external/collisions-demo.js";
 
-const { Cube, Torus } = defs;
+const { Cube } = defs;
 const { Vector, vec4, color, Mat4, Light, Material, Scene, Texture, hex_color, Shader, Matrix } = tiny;
-const { scale, translation, perspective } = Mat4;
+const { scale, translation, perspective, inverse, rotation } = Mat4;
 
 class Mushroom {
     constructor(position, which_cap, color_or_texture, color, changes_color, texture, cap_scale, stem_scale, none_scale_rotate, scale_rate, rotate_rate) {
@@ -37,6 +38,8 @@ export class Wonderland extends Scene {
             mushroom_cap_basic: new Shape_From_File("assets/mushroom-cap-basic.obj"),
             mushroom_cap: new Shape_From_File("assets/mushroom-cap.obj"),
             mushroom_stem: new Shape_From_File("assets/mushroom-stem.obj"),
+            god: new Shape_From_File("assets/rabbit.obj"),
+            potion: new Shape_From_File("assets/potion.obj"),
         };
 
         this.materials = {
@@ -73,17 +76,17 @@ export class Wonderland extends Scene {
             }),
             sun: new Material(new defs.Phong_Shader(),
                 {ambient: 1, color: hex_color("#ffffff")}),
-            planet_1: new Material(new defs.Phong_Shader(), 
+            planet_1: new Material(new defs.Phong_Shader(),
                 {ambient: 0.7, diffusivity: 0.75, specularity: 0.75, color: hex_color("#808080")}),
-            planet_2_phong: new Material(new defs.Phong_Shader(), 
+            planet_2_phong: new Material(new defs.Phong_Shader(),
                 {ambient: 0.5, diffusivity: 0.75, specularity: 0.75, color: hex_color("#80FFFF")}),
-            planet_3: new Material(new defs.Phong_Shader(), 
+            planet_3: new Material(new defs.Phong_Shader(),
                 {ambient: 0.5, diffusivity: 0.75, specularity: 0.75, color: hex_color("#B08040")}),
-            planet_4: new Material(new defs.Phong_Shader(), 
+            planet_4: new Material(new defs.Phong_Shader(),
                 {ambient: 0.5, diffusivity: 0.75, specularity: 0.75, color: hex_color("#93CAED")}),
-            ring: new Material(new Ring_Shader(), 
+            ring: new Material(new Ring_Shader(),
                 {ambient: 1, diffusivity: 0, specularity: 0, color: hex_color("#B08040")}),
-            moon: new Material(new defs.Phong_Shader(), 
+            moon: new Material(new defs.Phong_Shader(),
                 {ambient: 0.5, diffusivity: 0, specularity: 1, color: hex_color("#FF69B4")}),
             mushroom_cap_material_color: new Material(new defs.Phong_Shader(), {
                 ambient: 0.8,
@@ -105,6 +108,18 @@ export class Wonderland extends Scene {
                 ambient: 1,
                 texture: new Texture("assets/white-mushroom.jpeg"),
             }),
+            potion: new Material(new defs.Textured_Phong(1), {
+                color: color(0.5, 0.5, 0.5, 1),
+                ambient: 0.7,
+                diffusivity: 0.5,
+                specularity: 0.8,
+                texture: new Texture("assets/potion_texture.jpg"),
+            }),
+            god: new Material(new defs.Phong_Shader(), {
+                ambient: 1,
+                diffusivity: 1,
+                specularity: 1
+            })
         };
 
         this.mushrooms = this.generate_mushrooms();
@@ -136,6 +151,65 @@ export class Wonderland extends Scene {
             Vector.of(0, 8),
             Vector.of(1, 8),
         ];
+
+        // Collision
+        this.token_locs = [];
+        const diameter = config.NEW_PRESCALE_WALL_DIAMETER * config.WALL_HOR_SCALE_FACTOR;
+        const get_possible = () => this.getRandomArbitrary(-diameter, diameter);
+        while(this.token_locs.length < config.NUM_TOKENS) {
+            const x = get_possible();
+            const z = get_possible();
+            if (Custom_Movement_Controls.in_walls(x, z)) {
+                const loc = translation(x, config.CAMERA_HEIGHT, z).times(scale(0.75, 0.75, 0.75)).times(rotation(-Math.PI/2, 1, 0, 0));;
+                this.token_locs.push(loc);
+            }
+        }
+        this.collider = {
+            intersect_test: Body.intersect_sphere, points: new defs.Subdivision_Sphere(1), leeway: .5
+        };
+        this.tokens_found = 0;
+        const offset = 27;
+        this.god_mt = translation(offset, config.CAMERA_HEIGHT, -offset).times(rotation(-Math.PI/2, 1, 0, 0));
+        this.finished_game = false;
+    }
+
+    getRandomArbitrary(min, max) {
+        return Math.random() * (max - min) + min;
+    }
+
+    check_collisions(context) {
+        let cam_loc = context.scratchpad.controls.matrix;
+        if (cam_loc) {
+            cam_loc = cam_loc();
+        } else {
+            cam_loc = Mat4.identity();
+        }
+        this.cam_vec = [cam_loc[0][3], cam_loc[1][3], cam_loc[2][3]];
+        const player_body = new Body(this.shapes.cube, this.materials.origin, Mat4.scale(1,1,1));
+        player_body.emplace(cam_loc);
+        player_body.inverse = inverse(player_body.drawn_location);
+
+        for (let i = 0; i < this.token_locs.length; ) {
+            const loc = this.token_locs[i];
+            const body = new Body(this.shapes.potion, this.materials.origin, scale(1,1,1));
+            body.emplace(loc);
+            body.inverse = inverse(body.drawn_location);
+
+            const colliding = body.check_if_colliding(player_body, this.collider);
+            if (colliding) {
+                this.tokens_found += 1;
+                this.token_locs.splice(i,1);
+            } else {
+                ++i;
+            }
+        }
+
+        const god_body = new Body(this.shapes.god, this.materials.origin, scale(1,1,1));
+        god_body.emplace(this.god_mt);
+        god_body.inverse = inverse(god_body.drawn_location);
+        if (god_body.check_if_colliding(player_body, this.collider) && this.tokens_found == config.NUM_TOKENS) {
+            this.finished_game = true;
+        }
     }
 
     find_y_pos_1(t) {
@@ -182,7 +256,7 @@ export class Wonderland extends Scene {
         const light_blue = hex_color("#93CAED");
         const y_pos_1 = this.find_y_pos_1(t);
         const y_pos_2 = this.find_y_pos_2(t);
-            
+
         // PLANETS 1 ~ 4
         const planet_radius = 1;
 
@@ -227,7 +301,7 @@ export class Wonderland extends Scene {
         let model_transform_planet3_2 = model_transform.times(Mat4.rotation(2*t, 0, 1, 0)).times(Mat4.translation(0, y_pos_1, 6));
         this.shapes.sphere_sub_6.draw(context, program_state, model_transform_planet3_2, this.materials.planet_3.override({color: gray}));
         this.planet_3_2 = model_transform_planet3_2;
-            
+
         // COLUMN 4
         // ORB 1
         let model_transform_planet4 = model_transform.times(Mat4.rotation(2*t, 0, 1, 0)).times(Mat4.translation(0, y_pos_1, -2));
@@ -242,10 +316,10 @@ export class Wonderland extends Scene {
         this.shapes.sphere_sub_6.draw(context, program_state, model_transform_planet4_2, this.materials.planet_4.override({color: green_blue}));
         this.planet_4 = model_transform_planet4_2;
     }
-            
+
     generate_mushrooms() {
         let mushrooms = [];
-        
+
         let x = 1;
         let mushroom_scale;
         while (x <= 17) {
@@ -255,7 +329,7 @@ export class Wonderland extends Scene {
                 // Generate mushroom
                 mushroom_scale = Math.random() * 1.5 + 0.5;
                 let stem_scale = Math.random() * 0.75 + 0.25;
-                
+
                 let none_scale_rotate = 0;
                 let none_scale_rotate_chance = Math.floor(Math.random() * 10);
                 if (none_scale_rotate_chance < 4) { // 40% chance of scale
@@ -264,7 +338,7 @@ export class Wonderland extends Scene {
                 else if (none_scale_rotate_chance < 8) { // 40% chance of rotate
                     none_scale_rotate = 2;
                 }
-                
+
                 mushrooms.push(new Mushroom(
                     [mushroom_x, z],
                     Math.floor(Math.random() * 10) < 2 ? 0 : 1, // 20% of basic cap
@@ -291,7 +365,7 @@ export class Wonderland extends Scene {
 
         for (let i = 0; i < this.mushrooms.length; i++) {
             let mushroom = this.mushrooms[i];
-            
+
             model_transform = model_transform.times(Mat4.translation(mushroom.position[0], 0, mushroom.position[1]));
 
             // scaling or rotating
@@ -303,7 +377,7 @@ export class Wonderland extends Scene {
                 const rotate_factor = mushroom.rotate_rate * t;
                 model_transform = model_transform.times(Mat4.rotation(rotate_factor, 0, 1, 0));
             }
-            
+
             // scale for stem
             model_transform = model_transform.times(Mat4.scale(mushroom.stem_scale[0], mushroom.stem_scale[1], mushroom.stem_scale[2]))
                 .times(Mat4.translation(0, 1, 0));
@@ -317,9 +391,9 @@ export class Wonderland extends Scene {
             // unscale stem scaling
             model_transform = model_transform.times(Mat4.scale(1/mushroom.stem_scale[0], 1/mushroom.stem_scale[1], 1/mushroom.stem_scale[2]));
 
-            // scale for mushroom cap 
+            // scale for mushroom cap
             model_transform = model_transform.times(Mat4.scale(mushroom.cap_scale[0], mushroom.cap_scale[1], mushroom.cap_scale[2]));
-            
+
             // draw mushroom cap
             let texture_material;
             switch (mushroom.texture) {
@@ -352,7 +426,7 @@ export class Wonderland extends Scene {
                 .times(Mat4.translation(0, -0.8, 0))
                 .times(Mat4.translation(0, -1, 0))
                 .times(Mat4.scale(1/mushroom.stem_scale[0], 1/mushroom.stem_scale[1], 1/mushroom.stem_scale[2]))
-                
+
             // scaling
             if (mushroom.none_scale_rotate == 1) {
                 const scale_factor = 0.5*Math.sin(mushroom.scale_rate*t) + 1.5;
@@ -362,7 +436,7 @@ export class Wonderland extends Scene {
                 const rotate_factor = mushroom.rotate_rate * t;
                 model_transform = model_transform.times(Mat4.rotation(-rotate_factor, 0, 1, 0));
             }
-            
+
             model_transform = model_transform.times(Mat4.translation(-mushroom.position[0], 0, -mushroom.position[1]));
         }
 
@@ -477,11 +551,53 @@ export class Wonderland extends Scene {
 
         // Draw solar system up above
         this.draw_solar_system_above(program_state, context);
-      
+
       // Draw mushrooms
         let model_transform = Mat4.identity();
         model_transform = model_transform.times(Mat4.translation(-37, 0, 20));
         model_transform = this.draw_mushrooms(context, program_state, model_transform);
+
+        for (const loc of this.token_locs) {
+            this.shapes.potion.draw(context, program_state, loc, this.materials.potion);
+        }
+        this.check_collisions(context);
+
+        const osc = this.oscillate(0, 1, 7, 0, program_state.animation_time/1000);
+        let god_color = null;
+        if (this.finished_game) {
+            god_color = color(osc, osc, 1, 1);
+        } else {
+            god_color = color(1, osc, osc, 1);
+        }
+
+        // const offset = 8* config.NEW_PRESCALE_WALL_DIAMETER * config.WALL_HOR_SCALE_FACTOR;
+        this.shapes.god.draw(context, program_state, this.god_mt, this.materials.god.override({color: god_color}));
+    }
+
+    oscillate(min, max, period, offset, curr){
+        const range = max-min;
+        const shiftup = (range/2) + min;
+        return Math.cos((curr - (period/2) - offset) * (2 * Math.PI / period))*(range/2)+shiftup;
+    }
+
+    make_control_panel() {
+        // Display collision info.
+        // this.new_line();
+        // this.live_string(
+        //     (box) => (box.textContent = `- Currently colliding with wall: ${this.is_colliding}.`)
+        // );
+        // this.new_line();
+        // this.live_string(
+        //     (box) => (box.textContent = `- Cam loc: ${this.cam_vec}.`)
+        // );
+        this.new_line();
+        this.live_string(
+            (box) => (box.textContent = `- Found ${this.tokens_found} out of ${config.NUM_TOKENS} tokens!`)
+        );
+        // this.new_line();
+        // this.live_string(
+        //     (box) => (box.textContent = `- Found all: ${this.finished_game}.`)
+        // );
     }
 }
 
@@ -511,7 +627,7 @@ class Ring_Shader extends Shader {
         attribute vec3 position;
         uniform mat4 model_transform;
         uniform mat4 projection_camera_model_transform;
-        
+
         void main(){
             // The vertex's final resting place (in NDCS):
             gl_Position = projection_camera_model_transform * vec4( position, 1.0 );
@@ -534,4 +650,3 @@ class Ring_Shader extends Shader {
         }`;
     }
 }
-        

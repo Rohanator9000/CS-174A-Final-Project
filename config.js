@@ -15,6 +15,8 @@ const config = {
     // The maximum amount that the camera (when restricted) is allowed to rotate in either direction vertically.
     // Compared to abs(psi) (an Euler angle).
     MAX_CAM_VERT_ROTATION: 0.1,
+    NUM_TOKENS: 5,
+    GOD_OFFSET: 27,
 };
 
 export { config };

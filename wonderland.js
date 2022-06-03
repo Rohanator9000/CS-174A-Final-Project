@@ -84,7 +84,7 @@ export class Wonderland extends Scene {
             ring: new Material(new Ring_Shader(), 
                 {ambient: 1, diffusivity: 0, specularity: 0, color: hex_color("#B08040")}),
             moon: new Material(new defs.Phong_Shader(), 
-                {ambient: 0.5, diffusivity: 0, specularity: 1, color: hex_color("#FF69B4")})
+                {ambient: 0.5, diffusivity: 0, specularity: 1, color: hex_color("#FF69B4")}),
             mushroom_cap_material_color: new Material(new defs.Phong_Shader(), {
                 ambient: 0.8,
                 diffusivity: 0.8,
